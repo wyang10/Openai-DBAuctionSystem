@@ -8,7 +8,6 @@ An RDBMS‑backed auction site for furniture, built with Django and MySQL. Inclu
 
 ## Overview
 
-- Team: Team 9 — Siying Chen, Weihong Yang, Xiaoqing Meng, Junyi Liu
 - Core: Django web app for listings, bidding, comments, watchlists; custom `User`
 - DB: MySQL (local or Cloud SQL). SQL assets (DDL/DML/Views/Triggers) included
 - NL→SQL: Streamlit app uses OpenAI to generate SQL from plain English
