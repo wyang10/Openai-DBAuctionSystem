@@ -111,23 +111,7 @@ pip install -r dbauction/StreamLitApp/requirements.txt
 
 Choose either environment variables or Streamlit secrets.
 
-- Environment variables (shell):
-  - macOS/Linux:
-    - `export OPENAI_API_KEY="your_key"`
-    - `export DB_HOST="your_mysql_host"`
-    - `export DB_NAME="auction"`
-    - `export DB_USER="root"`
-    - `export DB_PASSWORD="your_password"`
-    - `export DB_PORT="3306"`
-    - `export DJANGO_SECRET_KEY="your_django_secret"`
-  - Windows (PowerShell):
-    - `$env:OPENAI_API_KEY="your_key"`
-    - `$env:DB_HOST="your_mysql_host"`
-    - `$env:DB_NAME="auction"`
-    - `$env:DB_USER="root"`
-    - `$env:DB_PASSWORD="your_password"`
-    - `$env:DB_PORT="3306"`
-    - `$env:DJANGO_SECRET_KEY="your_django_secret"`
+- Environment variables (.env.exmaple)
 
 - Streamlit secrets (recommended for Streamlit):
   - Create `./.streamlit/secrets.toml` with:
