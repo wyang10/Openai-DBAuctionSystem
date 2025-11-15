@@ -185,7 +185,12 @@ Note: The current `app.py` uses a legacy OpenAI completion model and hard‑code
 
 Screenshots are available in `dbauction/demo/`:
 - `HomePage.png` — Home page
+![alt text](dbauction/demo/HomePage.png "HomePage")
+
 - `Stramlit.png` — Streamlit NL→SQL
+![alt text](dbauction/demo/GPTquery.png "GPTquery")
+
+
 
 ## Troubleshooting
 
