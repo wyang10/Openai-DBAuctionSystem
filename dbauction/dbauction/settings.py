@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 
 from pathlib import Path
 import os
+from django.core.management.utils import get_random_secret_key
 
 from django.contrib.messages import constants as messages
 
@@ -30,11 +31,52 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.1/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'kac-r)0$cb)soc6)w_=ix67(8q_7li!uqba1_4zelq_y3(l#@_'
+def _env_bool(name: str, default: bool = False) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return str(val).strip().lower() in {"1", "true", "t", "yes", "y"}
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG from environment; default False
+DEBUG = _env_bool('DJANGO_DEBUG', False)
+
+# SECRET_KEY: production must set DJANGO_SECRET_KEY; for local dev
+# we accept [django].secret_key in .streamlit/secrets.toml, or
+# generate a temporary key when DEBUG=True.
+def _load_streamlit_django_secret():
+    try:
+        secrets_path = os.path.join(BASE_DIR.parent, '.streamlit', 'secrets.toml')
+        if not os.path.exists(secrets_path):
+            return None
+        in_django = False
+        with open(secrets_path, 'r', encoding='utf-8') as f:
+            for raw in f:
+                s = raw.strip()
+                if not s or s.startswith('#'):
+                    continue
+                if s.startswith('[') and s.endswith(']'):
+                    in_django = (s.lower() == '[django]')
+                    continue
+                if in_django and s.lower().startswith('secret_key') and '=' in s:
+                    _, v = s.split('=', 1)
+                    v = v.strip()
+                    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+                        v = v[1:-1]
+                    return v
+        return None
+    except Exception:
+        return None
+
+_secret_from_env = os.getenv('DJANGO_SECRET_KEY') or _load_streamlit_django_secret()
+if _secret_from_env:
+    SECRET_KEY = _secret_from_env
+elif DEBUG:
+    # Dev-only: generate an ephemeral secret key when debugging locally
+    SECRET_KEY = get_random_secret_key()
+else:
+    raise RuntimeError(
+        'DJANGO_SECRET_KEY is not set. In production, set DJANGO_SECRET_KEY. '
+        'For local dev, set DJANGO_DEBUG=1 or provide [django].secret_key in .streamlit/secrets.toml.')
 
 ALLOWED_HOSTS = ['*']
 
@@ -87,34 +129,71 @@ WSGI_APPLICATION = 'dbauction.wsgi.application'
 import pymysql  # noqa: 402
 pymysql.version_info = (1, 4, 6, 'final', 0)  # change mysqlclient version
 pymysql.install_as_MySQLdb()
+
+def _load_streamlit_mysql_section():
+    """Lightweight parser to read [mysql] keys from .streamlit/secrets.toml."""
+    try:
+        secrets_path = os.path.join(BASE_DIR.parent, '.streamlit', 'secrets.toml')
+        if not os.path.exists(secrets_path):
+            return {}
+        data = {}
+        in_mysql = False
+        with open(secrets_path, 'r', encoding='utf-8') as f:
+            for raw in f:
+                s = raw.strip()
+                if not s or s.startswith('#'):
+                    continue
+                if s.startswith('[') and s.endswith(']'):
+                    in_mysql = (s.lower() == '[mysql]')
+                    continue
+                if in_mysql and '=' in s:
+                    k, v = s.split('=', 1)
+                    k = k.strip().lower()
+                    v = v.strip()
+                    if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+                        v = v[1:-1]
+                    data[k] = v
+        return data
+    except Exception:
+        return {}
+
 # [START db_setup]
-if os.getenv('GAE_APPLICATION', None):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'HOST': '/cloudsql/db-002919463:us-west1:neu-test-db',
-            'USER': 'root',
-            'PASSWORD': '62*\-go2TV-zRmG_',
-            'NAME': 'auction',
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            }
+_mysql = _load_streamlit_mysql_section()
+_is_gae = os.getenv('GAE_APPLICATION', None)
+
+# Production: read DB config from environment variables only.
+# Local dev (DEBUG=True): allow fallback to .streamlit/secrets.toml [mysql].
+DB_HOST = os.getenv('DB_HOST') or (_mysql.get('host') if DEBUG else None)
+DB_NAME = os.getenv('DB_NAME') or (_mysql.get('name') if DEBUG else None)
+DB_USER = os.getenv('DB_USER') or (_mysql.get('user') if DEBUG else None)
+DB_PASSWORD = os.getenv('DB_PASSWORD') or (_mysql.get('password') if DEBUG else None)
+DB_PORT = os.getenv('DB_PORT') or (_mysql.get('port') if DEBUG else None) or '3306'
+
+missing = [k for k, v in {
+    'DB_HOST': DB_HOST,
+    'DB_NAME': DB_NAME,
+    'DB_USER': DB_USER,
+    'DB_PASSWORD': DB_PASSWORD,
+}.items() if not v]
+
+if missing:
+    raise RuntimeError(
+        f"Missing DB config: {', '.join(missing)}. "
+        "In production, set environment variables. For local dev, set DJANGO_DEBUG=1 and provide [mysql] in .streamlit/secrets.toml.")
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'HOST': DB_HOST,
+        'PORT': DB_PORT,
+        'NAME': DB_NAME,
+        'USER': DB_USER,
+        'PASSWORD': DB_PASSWORD,
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
         }
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.mysql',
-            'NAME': 'auction',
-            'USER': 'root',
-            'PASSWORD': '62*\-go2TV-zRmG_',
-            'HOST': '34.83.120.100',
-            'PORT': '3306',
-            'OPTIONS': {
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            }
-        }
-    }
+}
 
 AUTH_USER_MODEL = 'dbapp.User'
 

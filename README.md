@@ -76,13 +76,14 @@ The project currently reads MySQL settings from `dbauction/dbauction/settings.py
 - For Cloud SQL (GAE), it switches based on `GAE_APPLICATION` env var
 
 Recommended: use environment variables and a `local_settings.py` override to avoid committing secrets. Example variables to define:
-- `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`
+- `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`
+- `DJANGO_SECRET_KEY`
 
 4) Initialize database schema
 
 Option A — via Django migrations:
 ```
-cd dbauction
+cd dbAuction/
 python manage.py migrate
 python manage.py createsuperuser  # optional admin
 ```
@@ -108,9 +109,59 @@ pip install -r dbauction/StreamLitApp/requirements.txt
 
 2) Configure environment
 
-Define the following environment variables before running Streamlit:
-- `OPENAI_API_KEY` — your OpenAI key
-- `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` — MySQL connection
+Choose either environment variables or Streamlit secrets.
+
+- Environment variables (shell):
+  - macOS/Linux:
+    - `export OPENAI_API_KEY="your_key"`
+    - `export DB_HOST="your_mysql_host"`
+    - `export DB_NAME="auction"`
+    - `export DB_USER="root"`
+    - `export DB_PASSWORD="your_password"`
+    - `export DB_PORT="3306"`
+    - `export DJANGO_SECRET_KEY="your_django_secret"`
+  - Windows (PowerShell):
+    - `$env:OPENAI_API_KEY="your_key"`
+    - `$env:DB_HOST="your_mysql_host"`
+    - `$env:DB_NAME="auction"`
+    - `$env:DB_USER="root"`
+    - `$env:DB_PASSWORD="your_password"`
+    - `$env:DB_PORT="3306"`
+    - `$env:DJANGO_SECRET_KEY="your_django_secret"`
+
+- Streamlit secrets (recommended for Streamlit):
+  - Create `./.streamlit/secrets.toml` with:
+    - `OPENAI_API_KEY = "your_key"`
+    - Top‑level keys for Streamlit app (optional):
+      - `DB_HOST = "your_mysql_host"`
+      - `DB_NAME = "auction"`
+      - `DB_USER = "root"`
+      - `DB_PASSWORD = "your_password"`
+      - `DB_PORT = "3306"`
+    - And/or a block for Django fallback:
+      - `[mysql]`
+      - `host = "your_mysql_host"`
+      - `name = "auction"`
+      - `user = "root"`
+      - `port = "3306"`
+      - `password = "your_password"`
+    - Optionally, a Django section for secret key:
+      - `[django]`
+      - `secret_key = "your_django_secret"`
+
+Notes:
+- The repo `.gitignore` excludes `.streamlit/secrets.toml` and `.env*`.
+- Production uses environment variables only; `.streamlit/secrets.toml` is intended for local development.
+- Django reads DB settings from env first; if missing and `DJANGO_DEBUG=1`, it falls back to `[mysql]` in `./.streamlit/secrets.toml`. `SECRET_KEY` can be set via `DJANGO_SECRET_KEY` or `[django].secret_key` (dev only). If none and `DJANGO_DEBUG=1`, a temporary key is generated.
+- The app will warn if the key or DB credentials are not configured.
+
+## Deployment
+
+- Set environment variables: `DJANGO_SECRET_KEY`, `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_PORT`, `DJANGO_DEBUG=0`
+- Configure `ALLOWED_HOSTS` in `settings.py` (or inject via env if you add it)
+- Apply migrations: `python manage.py migrate`
+- Collect static files: `python manage.py collectstatic --noinput`
+- Run with a production server (gunicorn/uwsgi) behind a reverse proxy
 
 3) Run Streamlit
 

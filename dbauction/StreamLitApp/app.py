@@ -1,22 +1,71 @@
 # import librairies
+import os
 import openai
 import streamlit as st
 import mysql.connector
 
-# Add your open AI API key
-openai.api_key = "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"
+# Configure OpenAI API key securely via environment or Streamlit secrets
+_api_key = os.getenv("OPENAI_API_KEY")
+if not _api_key:
+    try:
+        _api_key = st.secrets["OPENAI_API_KEY"]
+    except Exception:
+        _api_key = None
 
-# Setting up database attributes
-# Add your server url
-SERVER_URL = "34.83.120.100"
-DB = "auction"
-USER_NAME = "root"  # Added your username
-PASSWORD = "62*\-go2TV-zRmG_"  # Added your passowrd
+if not _api_key:
+    st.warning(
+        "OPENAI_API_KEY is not configured. Set it as an environment variable or in .streamlit/secrets.toml.")
+else:
+    openai.api_key = _api_key
 
-SQL_CONNECTION = mysql.connector.connect(host=SERVER_URL,
-                                         user=USER_NAME,
-                                         password=PASSWORD,
-                                         database=DB)
+def _get_secret(key: str):
+    """Fetch a secret from env, then Streamlit secrets.
+    Supports both top-level keys and [mysql] section mapping.
+    """
+    val = os.getenv(key)
+    if val:
+        return val
+    # direct top-level access
+    try:
+        return st.secrets[key]
+    except Exception:
+        pass
+    # [mysql] section fallback for DB_* keys
+    try:
+        mapping = {
+            'DB_HOST': 'host',
+            'DB_NAME': 'name',
+            'DB_USER': 'user',
+            'DB_PASSWORD': 'password',
+            'DB_PORT': 'port',
+        }
+        if key in mapping and 'mysql' in st.secrets:
+            return st.secrets['mysql'].get(mapping[key])
+    except Exception:
+        pass
+    return None
+
+# Database configuration via environment variables or Streamlit secrets
+DB_HOST = _get_secret("DB_HOST")
+DB_NAME = _get_secret("DB_NAME")
+DB_USER = _get_secret("DB_USER")
+DB_PASSWORD = _get_secret("DB_PASSWORD")
+DB_PORT = _get_secret("DB_PORT") or 3306
+
+SQL_CONNECTION = None
+if all([DB_HOST, DB_NAME, DB_USER, DB_PASSWORD]):
+    try:
+        SQL_CONNECTION = mysql.connector.connect(
+            host=DB_HOST,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            database=DB_NAME,
+            port=int(DB_PORT) if isinstance(DB_PORT, str) else DB_PORT,
+        )
+    except Exception as e:
+        st.error(f"Failed to connect to MySQL: {e}")
+else:
+    st.warning("Database credentials (DB_HOST, DB_NAME, DB_USER, DB_PASSWORD) are not fully configured.")
 
 # Text input where the user enter the text to be translated to SQL query
 query = st.text_input('Enter you text to generate SQL query', '')
@@ -134,7 +183,11 @@ def display_results(results):
 
 # if the Generate SQL query if clicked
 if st.button('Generate SQL query'):
-    if query:  # Checking if the query string is not empty
+    if not _api_key:
+        st.error('OpenAI API key is not configured.')
+    elif SQL_CONNECTION is None:
+        st.error('Database connection is not configured.')
+    elif query:  # Checking if the query string is not empty
         response = generate_sql(query)
         st.code(response, language='sql')  # Display the generated SQL query
 

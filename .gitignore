@@ -1,0 +1,14 @@
+# Local secrets and environment files
+.streamlit/secrets.toml
+.env
+.env*
+.venv/
+.DS_Store
+dbauction/.DS_Store
+
+# Bytecode and cache
+__pycache__/
+*.pyc
+
+
+
