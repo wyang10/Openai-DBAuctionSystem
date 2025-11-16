@@ -33,6 +33,7 @@ An RDBMS‑backed auction site for furniture, built with Django and MySQL. Inclu
 ## Repository Structure
 
 ```
+
 DBAuctionSystem/
 ├─ dbauction/                      # Django project
 │  ├─ manage.py
@@ -46,6 +47,7 @@ DBAuctionSystem/
 │     └─ requirements.txt
 ├─ Group9_SQL_script/              # DDL, DML, Views, Triggers
 └─ dbenv/ or auction/              # Local Python virtualenvs (optional)
+
 ```
 
 ## Prerequisites
