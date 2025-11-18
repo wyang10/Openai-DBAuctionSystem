@@ -1,0 +1,11 @@
+graph TD
+  User[🧑‍💻 User Browser / Client] -->|POST /bid| API[🌐 FastAPI / Flask (Cloud Run)]
+
+  API --> CF[⚙️ Cloud Function: handle_bid]
+  CF --> DB[🗃️ Firestore (Auction Bids)]
+
+  subgraph Infra Layer [GCP Infra Layer]
+    API
+    CF
+    DB
+  end
