@@ -1,6 +1,7 @@
 <div align="center">
 
-# DBAuctionSystem — Furniture Auction Platform (Django + MySQL + Streamlit)
+# DBAuctionSystem — Furniture Auction Platform 
+# (Django + MySQL + Streamlit)
 
 An RDBMS‑backed auction site for furniture, built with Django and MySQL. Includes a Streamlit mini‑app that translates natural‑language queries to SQL using OpenAI for exploratory data access.
 
@@ -32,6 +33,7 @@ An RDBMS‑backed auction site for furniture, built with Django and MySQL. Inclu
 ## Repository Structure
 
 ```
+
 DBAuctionSystem/
 ├─ dbauction/                      # Django project
 │  ├─ manage.py
@@ -45,6 +47,7 @@ DBAuctionSystem/
 │     └─ requirements.txt
 ├─ Group9_SQL_script/              # DDL, DML, Views, Triggers
 └─ dbenv/ or auction/              # Local Python virtualenvs (optional)
+
 ```
 
 ## Prerequisites
