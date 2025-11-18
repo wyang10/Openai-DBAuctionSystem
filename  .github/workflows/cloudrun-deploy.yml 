@@ -1,0 +1,64 @@
+name: 🚀 Cloud Run Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - cloud-packaging
+    paths:
+      - '**.py'
+      - 'Dockerfile'
+      - 'terraform/**'
+      - '.github/workflows/cloudrun-deploy.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  SERVICE_NAME: auction-api
+  ARTIFACT_REPO: auction-docker
+  IMAGE_NAME: auction-app
+  GAR_URL: ${{ secrets.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ secrets.ARTIFACT_REPO }}/auction-app
+
+jobs:
+  build-and-deploy:
+    name: Build → Push → Deploy to Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: ⬇️ Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🔐 Set up GCP credentials
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+    - name: ☁️ Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+        install_components: gcloud
+
+    - name: 🔧 Configure Docker for Artifact Registry
+      run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev
+
+    - name: 🏗️ Build and push Docker image
+      run: |
+        docker build -t $GAR_URL:$GITHUB_SHA .
+        docker push $GAR_URL:$GITHUB_SHA
+
+    - name: 🚀 Deploy to Cloud Run
+      run: |
+        gcloud run deploy $SERVICE_NAME \
+          --image=$GAR_URL:$GITHUB_SHA \
+          --region=$REGION \
+          --platform=managed \
+          --allow-unauthenticated \
+          --vpc-connector=projects/${{ secrets.GCP_PROJECT_ID }}/locations/$REGION/connectors/auction-vpc \
+          --add-cloudsql-instances=${{ secrets.CLOUDSQL_CONNECTION_NAME }} \
+          --set-env-vars=DB_NAME=auction,DB_USER=root,DB_PASSWORD=${{ secrets.DB_PASSWORD }},DJANGO_SECRET_KEY=${{ secrets.DJANGO_SECRET_KEY }}
+
+    - name: ✅ Post-deploy confirmation
+      run: |
+        echo "🎉 Deployment completed! Visit the Cloud Run console to verify the service."

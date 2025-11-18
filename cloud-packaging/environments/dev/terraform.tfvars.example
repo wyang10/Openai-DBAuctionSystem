@@ -1,0 +1,31 @@
+# Data Pipeline Overview
+
+This module is reserved for future data ingestion and ETL logic, such as:
+- Collecting auction event logs
+- Cleaning and transforming bid data
+- Scheduling batch workflows (e.g., via Airflow or dbt)
+- Exporting data to Cloud SQL or BigQuery
+
+Currently not implemented in this demo — placeholder for extensibility.
+
+-- Cloud SQL table initialization
+CREATE TABLE IF NOT EXISTS auction_bid (
+  id SERIAL PRIMARY KEY,
+  user_id VARCHAR(50),
+  item_id VARCHAR(50),
+  bid_amount FLOAT,
+  timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+user_id,item_id,bid_amount,timestamp
+u001,itemA,35.5,2025-11-01 10:00:00
+u002,itemB,42.0,2025-11-01 10:05:00
+u001,itemA,45.0,2025-11-01 10:10:00
+u003,itemC,27.0,2025-11-01 10:15:00
+
+[
+  {"user_id": "u001", "item_id": "itemA", "bid_amount": 35.5, "timestamp": "2025-11-01T10:00:00"},
+  {"user_id": "u002", "item_id": "itemB", "bid_amount": 42.0, "timestamp": "2025-11-01T10:05:00"},
+  {"user_id": "u001", "item_id": "itemA", "bid_amount": 45.0, "timestamp": "2025-11-01T10:10:00"},
+  {"user_id": "u003", "item_id": "itemC", "bid_amount": 27.0, "timestamp": "2025-11-01T10:15:00"}
+]
